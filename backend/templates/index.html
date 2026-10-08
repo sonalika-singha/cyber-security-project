@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PhishGuard AI — Multimodal Digital Safety</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070b14;--card:#0d1120;--card2:#060910;--line:#1b2237;
+  --ink:#e2e8f0;--dim:#64748b;--dimmer:#475569;--faint:#334155;
+  --indigo:#818cf8;--cyan:#22d3ee;--orange:#fb923c;--green:#4ade80;
+  --red:#f87171;--pink:#f472b6;--yellow:#fbbf24;
+}
+body{background:var(--bg);font-family:'Space Grotesk',sans-serif;color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(99,102,241,.03) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(99,102,241,.03) 1px,transparent 1px);
+  background-size:44px 44px}
+body::after{content:'';position:fixed;top:-30%;left:50%;transform:translateX(-50%);
+  width:1000px;height:600px;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(99,102,241,.10),transparent 65%)}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.015),transparent),var(--card);
+  border:1px solid var(--line);border-radius:16px;transition:border-color .2s;backdrop-filter:blur(8px)}
+.card:hover{border-color:#28304d}
+.label{font-size:10px;font-weight:600;color:var(--dimmer);letter-spacing:.09em;text-transform:uppercase}
+.mono{font-family:'JetBrains Mono',monospace}
+nav{border-bottom:1px solid var(--line);background:rgba(7,11,20,.75);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50}
+.nav-item{padding:6px 14px;font-size:13px;color:var(--dim);cursor:pointer;border-radius:8px;transition:.15s}
+.nav-item:hover{color:var(--ink)}
+.nav-item.active{color:#fff;background:#141a2e}
+
+/* Mode selector */
+.mode-card{display:flex;align-items:center;gap:12px;padding:14px 20px;border-radius:14px;cursor:pointer;border:1px solid var(--line);background:var(--card);transition:.2s;flex:1;min-width:0}
+.mode-card:hover{border-color:#28304d}
+.mode-card.active{border-color:var(--indigo);background:linear-gradient(135deg,rgba(129,140,248,.12),rgba(34,211,238,.08));box-shadow:0 4px 20px rgba(129,140,248,.15)}
+.mode-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.mode-label{font-size:14px;font-weight:600;color:var(--ink)}
+.mode-sub{font-size:11px;color:var(--dim)}
+
+/* Tabs */
+.tab-btn{padding:10px 16px;font-size:13px;font-weight:500;color:var(--dim);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;margin-bottom:-1px;display:flex;align-items:center;gap:6px}
+.tab-btn:hover{color:var(--ink)}
+.tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.tab-panel{display:none;animation:fade .3s}
+.tab-panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* Inputs */
+.msg-input{width:100%;min-height:120px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink);font-size:14px;font-family:inherit;resize:vertical;transition:.15s;line-height:1.6}
+.msg-input:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 3px rgba(129,140,248,.12)}
+.msg-input::placeholder{color:var(--faint)}
+.url-input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--ink);font-size:13px;font-family:inherit;transition:.15s}
+.url-input:focus{outline:none;border-color:var(--indigo)}
+.url-input::placeholder{color:var(--faint)}
+.upload-zone{border:2px dashed var(--line);border-radius:12px;padding:26px 18px;text-align:center;cursor:pointer;color:var(--dimmer);font-size:12px;transition:.18s;background:var(--card2)}
+.upload-zone:hover{border-color:var(--indigo);color:var(--dim);background:#0a0f1e}
+.upload-zone.ready{border-color:var(--green);border-style:solid;color:var(--green);background:rgba(74,222,128,.05)}
+.btn{width:100%;padding:13px;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.18s;color:#0a0f1c;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--indigo),var(--cyan));box-shadow:0 6px 22px rgba(129,140,248,.25)}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 26px rgba(129,140,248,.38)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.btn-outline{background:transparent;border:1px solid var(--line);color:var(--dim);box-shadow:none;padding:10px 16px;font-size:12px;border-radius:10px}
+.btn-outline:hover{border-color:var(--indigo);color:var(--ink)}
+
+/* Toggle switch */
+.toggle{position:relative;width:42px;height:24px;background:var(--line);border-radius:12px;cursor:pointer;transition:.2s;flex-shrink:0}
+.toggle.on{background:var(--cyan)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s}
+.toggle.on::after{transform:translateX(18px)}
+
+/* Sidebar */
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--dim);transition:.15s}
+.sidebar-item:hover{background:rgba(129,140,248,.06);color:var(--ink)}
+.sidebar-item.active{background:rgba(129,140,248,.12);color:var(--ink);font-weight:600}
+.sidebar-icon{width:18px;text-align:center}
+
+/* Badges */
+.badge{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+.badge-high{background:rgba(248,113,113,.14);color:var(--red)}
+.badge-medium{background:rgba(251,146,60,.14);color:var(--orange)}
+.badge-low{background:rgba(74,222,128,.14);color:var(--green)}
+.badge-crit{background:rgba(248,113,113,.22);color:#fca5a5}
+
+/* Result panel */
+.result-panel{display:none;animation:fade .35s}.result-panel.visible{display:block}
+
+/* Risk ring */
+.risk-ring{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;position:relative}
+.risk-ring::before{content:'';position:absolute;inset:0;border-radius:50%;border:4px solid var(--line)}
+
+/* Feature chips */
+.chip{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);padding:6px 0}
+.chip-icon{width:20px;height:20px;border-radius:6px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+
+/* Evidence circle (fusion mode) — matches clean mockup */
+.evidence-ring{position:relative;width:100%;max-width:560px;aspect-ratio:1;margin:0 auto}
+.evidence-node{position:absolute;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:.2s;width:150px;text-align:center}
+.evidence-node:hover{transform:scale(1.04)}
+.evidence-circle{width:130px;height:130px;border-radius:50%;border:2px solid var(--nodecol,var(--line));display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--card);transition:.3s;position:relative;box-shadow:0 0 24px -6px var(--nodeglow,transparent)}
+.evidence-circle:hover{box-shadow:0 0 32px -4px var(--nodeglow,rgba(34,211,238,.4))}
+.evidence-circle.added{border-width:3px;box-shadow:0 0 28px -4px var(--nodeglow,rgba(74,222,128,.5))}
+.evidence-circle .ev-icon{font-size:26px;margin-bottom:4px;color:var(--nodecol,var(--ink))}
+.evidence-circle .ev-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.evidence-circle .ev-desc{font-size:9px;color:var(--dim);line-height:1.3;padding:0 12px}
+.evidence-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(34,211,238,.25),rgba(129,140,248,.12));border:3px solid var(--cyan);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:.3s;box-shadow:0 0 40px -8px rgba(34,211,238,.5);z-index:5}
+.evidence-center:hover{box-shadow:0 0 50px -4px rgba(34,211,238,.7);transform:translate(-50%,-50%) scale(1.03)}
+.evidence-add-btn{padding:5px 16px;border-radius:8px;font-size:11px;font-weight:600;border:none;cursor:pointer;transition:.15s}
+
+/* Quick actions */
+.qa-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;font-size:12px;color:var(--dim);cursor:pointer;transition:.15s;background:var(--card2);border:1px solid var(--line);width:100%}
+.qa-btn:hover{border-color:var(--indigo);color:var(--ink)}
+
+/* Recent activity card */
+.activity-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #111827;cursor:pointer;transition:.15s}
+.activity-item:last-child{border-bottom:none}
+.activity-item:hover{opacity:.85}
+.activity-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1b2237;border-radius:4px}
+
+/* Spin */
+.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Waveform animation */
+.wave-bar{width:3px;border-radius:2px;background:var(--green);animation:wave 1.2s ease-in-out infinite;display:inline-block;margin:0 1px}
+@keyframes wave{0%,100%{height:8px}50%{height:24px}}
+
+/* Risk level colors */
+.risk-low{color:var(--green)}.risk-suspicious{color:var(--yellow)}.risk-high{color:var(--orange)}.risk-danger{color:var(--red)}
+
+/* Footer */
+footer{border-top:1px solid var(--line);background:rgba(7,11,20,.6);margin-top:auto}
+
+/* Processing pipeline */
+.proc-step{padding:5px 10px;background:var(--card2);border:1px solid var(--line);border-radius:7px;font-size:10px;color:var(--dim);transition:.25s}
+.proc-step.active{background:rgba(129,140,248,.14);border-color:var(--indigo);color:var(--indigo)}
+.proc-icon-box{background:var(--card2);border-radius:7px;padding:8px;text-align:center;font-size:10px;color:var(--dim)}
+.proc-icon-box .pi{font-size:16px;margin-bottom:3px}
+
+/* What to do next */
+.step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+
+/* Live indicator */
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(248,113,113,.5)}50%{opacity:.8;box-shadow:0 0 0 6px rgba(248,113,113,0)}}
+.live-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--red);background:rgba(248,113,113,.1);padding:3px 10px;border-radius:6px}
+
+/* Hide mode panels */
+.mode-panel{display:none}.mode-panel.active{display:block}
+
+/* Realtime feature card */
+.rt-card{border:1px solid var(--line);border-radius:14px;padding:20px;background:var(--card);transition:.2s;cursor:pointer;position:relative;overflow:hidden}
+.rt-card:hover{border-color:#28304d;transform:translateY(-1px)}
+.rt-card .rt-arrow{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:16px}
+
+/* Token explainability bars */
+.tok{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.tok-name{width:96px;text-align:right;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.tok-bar-wrap{flex:1;height:16px;background:var(--card2);border-radius:4px;position:relative;overflow:hidden}
+.tok-bar{height:100%;border-radius:4px;transition:width .6s}
+.tok-val{width:52px;font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+
+/* Fusion channel meters */
+.fch{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #111827}
+.fch:last-child{border-bottom:none}
+.fch-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.meter{flex:1;height:7px;background:var(--card2);border-radius:4px;overflow:hidden}
+.meter-fill{height:100%;border-radius:4px;transition:width .7s}
+
+/* Donut chart */
+.donut-ring{transition:stroke-dasharray .8s cubic-bezier(.4,0,.2,1),stroke .3s}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══ -->
+<nav>
+  <div style="max-width:1360px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--indigo),var(--cyan));border-radius:9px;display:flex;align-items:center;justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5L2.5 4.5V9c0 3 2.3 5.8 5.5 6.5C11.2 14.8 13.5 12 13.5 9V4.5L8 1.5z" stroke="#0a0f1c" stroke-width="1.4" stroke-linejoin="round" fill="none"/><path d="M5.5 8.5l2 2 3-3.5" stroke="#0a0f1c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+      <span style="font-weight:700;font-size:15px;color:#f1f5f9">PhishGuard <span style="color:var(--cyan)">AI</span></span>
+      <span class="mono" style="font-size:9px;color:var(--faint);border:1px solid var(--line);padding:2px 6px;border-radius:5px">MULTI-MODAL V2</span>
+    </div>
+    <div style="position:relative;cursor:pointer;font-size:18px;color:var(--dim)" title="Notifications">🔔</div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN LAYOUT ═══ -->
+<div style="max-width:1360px;margin:0 auto;padding:16px 20px 30px;position:relative;z-index:1;display:grid;grid-template-columns:1fr 300px;gap:18px;flex:1">
+
+<!-- ═══ CENTER ═══ -->
+<div style="display:flex;flex-direction:column;gap:16px">
+
+  <!-- Hero -->
+  <div style="text-align:center;padding:10px 0 4px">
+    <h1 style="font-size:28px;font-weight:700;color:#f1f5f9;margin-bottom:4px">
+      Detect the Fake. <span style="background:linear-gradient(135deg,var(--indigo),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Protect the Real.</span>
+    </h1>
+    <p id="hero-sub" style="font-size:13px;color:var(--dim)">Real-time protection. Deep analysis. Safer decisions.</p>
+  </div>
+
+  <!-- Mode selector -->
+  <div style="display:flex;gap:10px">
+    <div class="mode-card active" id="mc-realtime" onclick="switchMode('realtime')">
+      <div class="mode-icon" style="background:rgba(248,113,113,.12);color:var(--red)">🔴</div>
+      <div><div class="mode-label">Real-Time Mode</div><div class="mode-sub">Detect threats as they happen</div></div>
+    </div>
+    <div class="mode-card" id="mc-playback" onclick="switchMode('playback')">
+      <div class="mode-icon" style="background:rgba(34,211,238,.12);color:var(--cyan)">📁</div>
+      <div><div class="mode-label">Playback Mode</div><div class="mode-sub">Analyze recorded content</div></div>
+    </div>
+    <div class="mode-card" id="mc-fusion" onclick="switchMode('fusion')">
+      <div class="mode-icon" style="background:rgba(129,140,248,.12);color:var(--indigo)">🔬</div>
+      <div><div class="mode-label">Fusion Investigation</div><div class="mode-sub">Upload multiple evidence</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- MODE: REAL-TIME -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="mode-panel active" id="panel-realtime">
+    <div class="card" style="padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2 style="font-size:17px;font-weight:700;color:#f1f5f9">Real-Time Mode</h2>
+          <span class="live-badge"><span class="live-dot"></span> LIVE</span>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:20px">Get instant protection while you're on a call or watching content online.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Call Guard -->
+        <div class="rt-card" id="rt-call-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(74,222,128,.12);display:flex;align-items:center;justify-content:center;font-size:20px">📞</div>
+            <div><div style="font-weight:600;font-size:14px">Real-Time Call Detection</div><div style="font-size:11px;color:var(--dim)">Put the call on speaker and let PhishGuard listen detect suspicious conversations in real time.</div></div>
+          </div>
+          <div id="call-idle" style="text-align:center;padding:16px 0">
+            <div style="display:flex;justify-content:center;gap:2px;height:28px;align-items:center;margin-bottom:8px">
+              <div class="wave-bar" style="animation-delay:0s;background:var(--green)"></div>
+              <div class="wave-bar" style="animation-delay:.15s;background:var(--green)"></div>
+              <div class="wave-bar" style="animation-delay:.3s;background:var(--green)"></div>
+              <div class="wave-bar" style="animation-delay:.45s;background:var(--green)"></div>
+              <div class="wave-bar" style="animation-delay:.6s;background:var(--green)"></div>
+              <div class="wave-bar" style="animation-delay:.75s;background:var(--green)"></div>
+              <div class="wave-bar" style="animation-delay:.9s;background:var(--green)"></div>
+            </div>
+            <div style="font-weight:600;color:var(--ink);font-size:13px">Ready to listen</div>
+            <div style="font-size:11px;color:var(--dim)">Click start to begin real-time call analysis</div>
+          </div>
+          <div id="call-active" style="display:none;text-align:center;padding:12px 0">
+            <div id="call-risk-display" style="font-size:24px;font-weight:700;margin-bottom:4px" class="risk-low">🟢 LOW RISK</div>
+            <div id="call-transcript-preview" style="font-size:12px;color:var(--dim);min-height:20px;font-style:italic"></div>
+          </div>
+          <button class="btn" id="call-btn" style="margin-top:12px;background:linear-gradient(135deg,#4ade80,#22d3ee)" onclick="toggleCallGuard()">
+            <span id="call-btn-icon">🎙️</span><span id="call-btn-text">Start Call Guard</span>
+          </button>
+          <!-- Analyze button appears after a recording -->
+          <button class="btn" id="call-analyze-btn" style="margin-top:10px;display:none;background:linear-gradient(135deg,var(--indigo),var(--cyan))" onclick="analyzeCallRecording()">
+            <span id="call-analyze-text">🔍 Analyze Recording</span>
+          </button>
+          <!-- Result box -->
+          <div id="call-result" style="display:none;margin-top:12px;padding:12px;border-radius:10px;background:var(--card2);border:1px solid var(--line)">
+            <div id="call-result-verdict" style="font-size:16px;font-weight:700;text-align:center;margin-bottom:6px"></div>
+            <div id="call-result-signals" style="font-size:11px;color:var(--dim);line-height:1.6"></div>
+            <button class="btn" id="call-whatnext-btn" style="margin-top:10px;font-size:12px;padding:9px;display:none" onclick="showWhatNext(lastCallCategory,lastCallLevel)">🆘 What should I do?</button>
+          </div>
+          <div style="text-align:center;margin-top:8px"><a href="#" onclick="testSampleCall();return false" style="font-size:11px;color:var(--dim);text-decoration:underline">Test with a sample call</a></div>
+
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <div class="chip"><span class="chip-icon">📝</span>Live transcription</div>
+            <div class="chip"><span class="chip-icon">📊</span>Voice analysis</div>
+            <div class="chip"><span class="chip-icon">🚨</span>Scam detection</div>
+            <div class="chip"><span class="chip-icon">⚡</span>Instant alerts</div>
+          </div>
+        </div>
+
+        <!-- Screen Scan -->
+        <div class="rt-card" id="rt-screen-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(129,140,248,.12);display:flex;align-items:center;justify-content:center;font-size:20px">🖥️</div>
+            <div><div style="font-weight:600;font-size:14px">Scan What I Can See</div><div style="font-size:11px;color:var(--dim)">Share your screen to analyze videos, websites, social media, or any on-screen content in real time.</div></div>
+          </div>
+          <div id="screen-idle" style="text-align:center;padding:16px 0">
+            <div style="font-size:36px;margin-bottom:8px;color:var(--dim)">🖥️</div>
+            <div style="font-weight:600;color:var(--ink);font-size:13px">Share your screen</div>
+            <div style="font-size:11px;color:var(--dim)">We'll analyze the content you're viewing<br>in real time (e.g. YouTube, Facebook, Instagram)</div>
+          </div>
+          <div id="screen-active" style="display:none;text-align:center;padding:12px 0">
+            <div id="screen-risk-display" style="font-size:24px;font-weight:700;margin-bottom:4px" class="risk-low">🟢 SCANNING...</div>
+            <div id="screen-status" style="font-size:12px;color:var(--dim)">Analyzing screen content...</div>
+          </div>
+          <button class="btn" id="screen-btn" style="margin-top:12px;background:linear-gradient(135deg,var(--indigo),var(--cyan))" onclick="toggleScreenScan()">
+            <span id="screen-btn-icon">🖥️</span><span id="screen-btn-text">Start Screen Scan</span>
+          </button>
+          <!-- Analyze button appears while sharing -->
+          <button class="btn" id="screen-analyze-btn" style="margin-top:10px;display:none;background:linear-gradient(135deg,var(--indigo),var(--cyan))" onclick="analyzeScreenNow()">
+            <span id="screen-analyze-text">🔍 Analyze What I See</span>
+          </button>
+          <!-- Result box -->
+          <div id="screen-result" style="display:none;margin-top:12px;padding:12px;border-radius:10px;background:var(--card2);border:1px solid var(--line)">
+            <div id="screen-result-verdict" style="font-size:16px;font-weight:700;text-align:center;margin-bottom:6px"></div>
+            <div id="screen-result-signals" style="font-size:11px;color:var(--dim);line-height:1.6"></div>
+            <button class="btn" id="screen-whatnext-btn" style="margin-top:10px;font-size:12px;padding:9px;display:none" onclick="showWhatNext(lastScreenCategory,lastScreenLevel)">🆘 What should I do?</button>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <div class="chip"><span class="chip-icon">🌐</span>Works on any platform</div>
+            <div class="chip"><span class="chip-icon">🔊</span>Detects spoken content</div>
+            <div class="chip"><span class="chip-icon">🔤</span>Reads visible text/links</div>
+            <div class="chip"><span class="chip-icon">🚨</span>Real-time risk alerts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- MODE: PLAYBACK -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="mode-panel" id="panel-playback">
+    <div class="card" style="padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <h2 style="font-size:17px;font-weight:700;color:#f1f5f9">Playback Mode</h2>
+      </div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:18px">Upload or paste any suspicious content to analyze. Our AI will detect threats, explain the reasons, and guide you on what to do next.</p>
+
+      <!-- Playback tabs -->
+      <div style="display:flex;border-bottom:1px solid var(--line);margin-bottom:18px">
+        <button class="tab-btn active" onclick="switchPlayTab('pb-text')">📝 Text & URL</button>
+        <button class="tab-btn" onclick="switchPlayTab('pb-audio')">🎙️ Audio</button>
+        <button class="tab-btn" onclick="switchPlayTab('pb-image')">🖼️ Image</button>
+        <button class="tab-btn" onclick="switchPlayTab('pb-video')">🎬 Video</button>
+      </div>
+
+      <!-- Text & URL -->
+      <div id="pb-text" class="tab-panel active">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div class="label">Paste Text / Message / Email</div>
+          <span style="font-size:11px;color:var(--faint)" id="text-counter">0/5000</span>
+        </div>
+        <textarea class="msg-input" id="pb-text-input" maxlength="5000" oninput="document.getElementById('text-counter').textContent=this.value.length+'/5000'"
+          placeholder="Paste a suspicious message, email, or text here...&#10;&#10;e.g. Dear customer, your KYC has expired. Verify now at http://sbi-verify.xyz"></textarea>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+          <span style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px">🔗 Include URL analysis (recommended)</span>
+          <div class="toggle on" id="url-toggle" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div id="url-input-row" style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <span style="color:var(--dim);font-size:14px">🔗</span>
+          <input type="text" class="url-input" id="pb-url-input" placeholder="Paste URL here (optional)" style="flex:1"/>
+          <button class="btn-outline" style="width:auto;white-space:nowrap" onclick="checkUrlOnly()">Check URL</button>
+        </div>
+        <button class="btn" style="margin-top:16px" id="pb-text-btn" onclick="analyzeTextUrl()"><span id="pb-text-btn-text">🔍 Analyze Text & URL</span></button>
+        <div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;justify-content:center">
+          <div class="chip"><span class="chip-icon">🛡️</span>Detects phishing language</div>
+          <div class="chip"><span class="chip-icon">🔗</span>Analyzes suspicious URLs</div>
+          <div class="chip"><span class="chip-icon">💡</span>Provides explanation (why it was flagged)</div>
+          <div class="chip"><span class="chip-icon">🆘</span>Get safety advice (what to do next)</div>
+        </div>
+      </div>
+
+      <!-- Audio -->
+      <div id="pb-audio" class="tab-panel">
+        <input type="file" id="pb-audio-file" accept=".wav,.mp3,.ogg,.flac,.m4a,.webm" style="display:none" onchange="pbFileSelected('audio')"/>
+        <div class="upload-zone" id="pb-zone-audio" onclick="document.getElementById('pb-audio-file').click()">
+          <div style="font-size:30px;margin-bottom:8px">🎙️</div>
+          <div style="font-weight:600;color:#94a3b8;margin-bottom:4px">Upload audio file or recording</div>
+          <div>Supports .wav .mp3 .ogg .flac .m4a .webm</div>
+        </div>
+        <button class="btn" style="margin-top:16px" onclick="analyzePlayback('audio')"><span>🔍 Analyze Audio</span></button>
+      </div>
+
+      <!-- Image -->
+      <div id="pb-image" class="tab-panel">
+        <input type="file" id="pb-image-file" accept=".png,.jpg,.jpeg,.webp,.bmp" style="display:none" onchange="pbFileSelected('image')"/>
+        <div class="upload-zone" id="pb-zone-image" onclick="document.getElementById('pb-image-file').click()">
+          <div style="font-size:30px;margin-bottom:8px">🖼️</div>
+          <div style="font-weight:600;color:#94a3b8;margin-bottom:4px">Upload screenshot or image</div>
+          <div>Fake bank notices, receipts, login pages, offers, ID documents</div>
+        </div>
+        <button class="btn" style="margin-top:16px" onclick="analyzePlayback('image')"><span>🔍 Analyze Image</span></button>
+      </div>
+
+      <!-- Video -->
+      <div id="pb-video" class="tab-panel">
+        <input type="file" id="pb-video-file" accept=".mp4,.avi,.mov,.mkv,.webm" style="display:none" onchange="pbFileSelected('video')"/>
+        <div class="upload-zone" id="pb-zone-video" onclick="document.getElementById('pb-video-file').click()">
+          <div style="font-size:30px;margin-bottom:8px">🎬</div>
+          <div style="font-weight:600;color:#94a3b8;margin-bottom:4px">Upload video file</div>
+          <div>Supports .mp4 .avi .mov .mkv .webm</div>
+        </div>
+        <button class="btn" style="margin-top:16px" onclick="analyzePlayback('video')"><span>🔍 Analyze Video</span></button>
+      </div>
+    </div>
+
+    <!-- Playback results -->
+    <div class="card result-panel" id="playback-results" style="padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div class="label">Analysis Result</div>
+          <div id="pb-verdict" style="font-size:22px;font-weight:700;margin-top:4px">—</div>
+        </div>
+        <div style="text-align:right">
+          <div id="pb-conf" style="font-size:28px;font-weight:700;color:#f1f5f9">—</div>
+          <div id="pb-threat-badge" style="margin-top:4px"></div>
+        </div>
+      </div>
+      <div id="pb-explanation" style="font-size:12px;color:#94a3b8;line-height:1.7;border-top:1px solid var(--line);padding-top:12px"></div>
+      <div id="pb-url-results" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <div class="label" style="margin-bottom:8px">URL Analysis</div>
+        <div id="pb-url-detail"></div>
+      </div>
+      <!-- Explainability section -->
+      <div id="pb-explain-card" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <div class="label" style="margin-bottom:10px">Explainability — <span id="pb-explain-method" class="mono" style="color:var(--indigo);text-transform:none"></span></div>
+        <div id="pb-explain-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- MODE: FUSION -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="mode-panel" id="panel-fusion">
+    <div class="card" style="padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <h2 style="font-size:17px;font-weight:700;color:#f1f5f9">Add Your Evidence</h2>
+      </div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:20px">Include as many evidence pieces as you have from the same incident.</p>
+
+      <!-- Evidence circle layout (matches clean mockup) -->
+      <div class="evidence-ring" style="height:480px;margin-top:10px">
+        <!-- Top: Text (green/teal) -->
+        <div class="evidence-node" style="top:0;left:50%;transform:translateX(-50%);--nodecol:#4ade80;--nodeglow:rgba(74,222,128,.4)" onclick="fusionAdd('text')">
+          <div class="evidence-circle" id="fev-text">
+            <span class="ev-icon">📄</span><span class="ev-title">Text</span>
+            <span class="ev-desc">Paste message, email or content</span>
+            <button class="evidence-add-btn" style="background:rgba(74,222,128,.18);color:#4ade80;margin-top:4px" id="fev-text-btn">Add Text</button>
+          </div>
+        </div>
+        <!-- Left: URL (blue) -->
+        <div class="evidence-node" style="top:32%;left:-6px;--nodecol:#3b82f6;--nodeglow:rgba(59,130,246,.4)" onclick="fusionAdd('url')">
+          <div class="evidence-circle" id="fev-url">
+            <span class="ev-icon">🔗</span><span class="ev-title">URL</span>
+            <span class="ev-desc">Paste suspicious link or website</span>
+            <button class="evidence-add-btn" style="background:rgba(59,130,246,.18);color:#60a5fa;margin-top:4px" id="fev-url-btn">Add URL</button>
+          </div>
+        </div>
+        <!-- Right: Image (purple) -->
+        <div class="evidence-node" style="top:32%;right:-6px;--nodecol:#a855f7;--nodeglow:rgba(168,85,247,.4)" onclick="fusionAdd('image')">
+          <div class="evidence-circle" id="fev-image">
+            <span class="ev-icon">🖼️</span><span class="ev-title">Image</span>
+            <span class="ev-desc">Upload screenshot or image</span>
+            <button class="evidence-add-btn" style="background:rgba(168,85,247,.18);color:#c084fc;margin-top:4px" id="fev-image-btn">Add Image</button>
+          </div>
+        </div>
+        <!-- Bottom-left: Audio (orange) -->
+        <div class="evidence-node" style="bottom:0;left:10%;--nodecol:#fb923c;--nodeglow:rgba(251,146,60,.4)" onclick="fusionAdd('audio')">
+          <div class="evidence-circle" id="fev-audio">
+            <span class="ev-icon">🎙️</span><span class="ev-title">Audio</span>
+            <span class="ev-desc">Upload audio file or recording</span>
+            <button class="evidence-add-btn" style="background:rgba(251,146,60,.18);color:#fb923c;margin-top:4px" id="fev-audio-btn">Add Audio</button>
+          </div>
+        </div>
+        <!-- Bottom-right: Video (red/pink) -->
+        <div class="evidence-node" style="bottom:0;right:10%;--nodecol:#f472b6;--nodeglow:rgba(244,114,182,.4)" onclick="fusionAdd('video')">
+          <div class="evidence-circle" id="fev-video">
+            <span class="ev-icon">🎬</span><span class="ev-title">Video</span>
+            <span class="ev-desc">Upload video file</span>
+            <button class="evidence-add-btn" style="background:rgba(244,114,182,.18);color:#f472b6;margin-top:4px" id="fev-video-btn">Add Video</button>
+          </div>
+        </div>
+        <!-- Center: Analyze -->
+        <div class="evidence-center" onclick="runFusion()">
+          <div style="font-size:26px;margin-bottom:2px">🔍</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;text-align:center;line-height:1.2">Analyze<br>All Evidence</div>
+          <div style="font-size:18px;margin-top:4px;color:var(--cyan)">→</div>
+        </div>
+      </div>
+
+      <!-- Hidden file inputs for fusion -->
+      <input type="file" id="fev-image-input" accept="image/*" style="display:none" onchange="fusionFileAdded('image',this)"/>
+      <input type="file" id="fev-audio-input" accept="audio/*" style="display:none" onchange="fusionFileAdded('audio',this)"/>
+      <input type="file" id="fev-video-input" accept="video/*" style="display:none" onchange="fusionFileAdded('video',this)"/>
+      <!-- Hidden text/url inputs (modals would be nicer but this works) -->
+      <div id="fusion-text-modal" style="display:none;margin-top:16px">
+        <div class="label" style="margin-bottom:6px">Text evidence</div>
+        <textarea class="msg-input" id="fev-text-val" style="min-height:70px" placeholder="Paste the suspicious message / email here"></textarea>
+      </div>
+      <div id="fusion-url-modal" style="display:none;margin-top:10px">
+        <div class="label" style="margin-bottom:6px">URL evidence</div>
+        <input type="text" class="url-input" id="fev-url-val" placeholder="Paste the suspicious URL here"/>
+      </div>
+    </div>
+
+    <!-- Fusion results -->
+    <div class="card result-panel" id="fusion-results" style="padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div><div class="label">Unified Verdict</div><div id="f-verdict" style="font-size:24px;font-weight:700;margin-top:4px">—</div></div>
+        <div style="text-align:right"><div id="f-conf" style="font-size:28px;font-weight:700;color:#f1f5f9">—</div><div id="f-threat" style="margin-top:4px"></div></div>
+      </div>
+      <div id="f-campaign" style="background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink);margin-bottom:16px"></div>
+      <div class="label" style="margin-bottom:10px">Per-channel contribution</div>
+      <div id="f-channels"></div>
+      <div id="f-explain" style="margin-top:16px;font-size:12px;color:#94a3b8;line-height:1.7;border-top:1px solid var(--line);padding-top:14px"></div>
+    </div>
+  </div>
+
+  <!-- ═══ QUICK ACTIONS + RECENT ACTIVITY ═══ -->
+  <div style="display:grid;grid-template-columns:180px 1fr;gap:16px;margin-top:4px">
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px">Quick Actions</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="qa-btn" onclick="getAdvice('general')"><span>💡</span> What to do if scammed?</div>
+        <div class="qa-btn" onclick="alert('To report a scam in India:\n\n• Call 1930 (National Cyber Crime Helpline)\n• File at cybercrime.gov.in\n• Report to your bank immediately')"><span>📋</span> Report a scam</div>
+        <div class="qa-btn" onclick="alert('Feature coming soon: Send an alert with evidence summary to a trusted contact.')"><span>👥</span> Alert a trusted person</div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">Recent Activity</div>
+        <span style="font-size:11px;color:var(--cyan);cursor:pointer">View All →</span>
+      </div>
+      <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px" id="recent-activity">
+        <div style="font-size:12px;color:var(--faint);padding:12px">No scans yet. Start analyzing to see your history here.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RIGHT SIDEBAR ═══ -->
+<div style="display:flex;flex-direction:column;gap:16px;padding-top:24px">
+
+  <!-- Context card — changes per mode -->
+  <div class="card" style="padding:16px" id="right-context-card">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:38px;height:38px;background:linear-gradient(135deg,var(--indigo),var(--cyan));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px" id="ctx-icon">🛡️</div>
+      <div><div style="font-weight:600;font-size:13px" id="ctx-title">Your AI Safety Companion</div><div style="font-size:10px;color:var(--dim)" id="ctx-sub">Messages · Calls · Images · Videos · URLs</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--dim);line-height:1.5;border-top:1px solid var(--line);padding-top:10px;margin-top:12px" id="ctx-foot">Because people matter.</div>
+  </div>
+
+  <!-- Recent Fusion Scans (fusion mode only) -->
+  <div class="card" style="padding:16px;display:none" id="right-fusion-scans">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-weight:600;font-size:13px">Recent Fusion Scans</div>
+      <span style="font-size:11px;color:var(--cyan);cursor:pointer">View All →</span>
+    </div>
+    <div id="fusion-scans-list"><div style="font-size:12px;color:var(--faint);padding:4px 0">No fusion scans yet.</div></div>
+  </div>
+
+  <!-- Current Session (real-time) -->
+  <div class="card" style="padding:16px" id="right-session">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:600;font-size:13px">Current Session</div>
+      <span class="live-badge" id="session-live-badge" style="display:none"><span class="live-dot"></span> LIVE</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--card2);padding:8px 10px;border-radius:8px"><div style="font-size:10px;color:var(--dimmer)">Mode</div><div id="session-mode" style="font-size:12px;color:var(--ink);display:flex;align-items:center;gap:4px">—</div></div>
+      <div style="background:var(--card2);padding:8px 10px;border-radius:8px"><div style="font-size:10px;color:var(--dimmer)">Duration</div><div id="session-duration" style="font-size:12px;color:var(--ink)">00:00:00</div></div>
+    </div>
+    <div style="background:var(--card2);padding:8px 10px;border-radius:8px"><div style="font-size:10px;color:var(--dimmer)">Risk Level</div><div id="session-risk" style="font-size:14px;font-weight:600;margin-top:2px">—</div></div>
+  </div>
+
+  <!-- Live Transcript -->
+  <div class="card" style="padding:16px" id="right-transcript">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-weight:600;font-size:13px">Live Transcript</div>
+      <span style="font-size:11px;color:var(--dim);cursor:pointer" onclick="document.getElementById('transcript-body').innerHTML=''">🗑️ Clear</span>
+    </div>
+    <div id="transcript-body" style="max-height:160px;overflow-y:auto;font-size:12px;color:var(--dim);line-height:1.6">Conversation will appear here...</div>
+  </div>
+
+  <!-- Real-Time Risk gauge -->
+  <div class="card" style="padding:16px" id="right-risk-gauge">
+    <div style="font-weight:600;font-size:13px;margin-bottom:12px">Real-Time Risk</div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="risk-ring" id="risk-ring" style="border:4px solid var(--line)">
+        <span id="risk-pct" style="color:var(--dim)">0%</span>
+      </div>
+      <div>
+        <div id="risk-label" style="font-size:14px;font-weight:600;color:var(--dim)">Waiting...</div>
+        <div style="font-size:11px;color:var(--dimmer)">Start a session to see live risk analysis.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;font-size:10px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span> Low</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow)"></span> Suspicious</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--orange)"></span> High</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--red)"></span> Critical</span>
+    </div>
+  </div>
+
+  <!-- Processing Pipeline (playback/fusion) -->
+  <div class="card" style="padding:16px;display:none" id="right-pipeline">
+    <div class="label" style="margin-bottom:10px">Processing Pipeline</div>
+    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:12px" id="pipeline-steps">
+      <div class="proc-step" id="pipe-0">Input</div><span style="color:#4f46e5;font-size:11px">→</span>
+      <div class="proc-step" id="pipe-1">Preprocess</div><span style="color:#4f46e5;font-size:11px">→</span>
+      <div class="proc-step" id="pipe-2">Model</div><span style="color:#4f46e5;font-size:11px">→</span>
+      <div class="proc-step" id="pipe-3">Results</div>
+    </div>
+    <div id="pipeline-icons" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+      <div class="proc-icon-box"><div class="pi">📝</div>NLP</div>
+      <div class="proc-icon-box"><div class="pi">🔗</div>URL Analysis</div>
+      <div class="proc-icon-box"><div class="pi">💡</div>Explainability</div>
+      <div class="proc-icon-box"><div class="pi">🛡️</div>Safety Advice</div>
+    </div>
+  </div>
+
+  <!-- Recent Scans (playback) -->
+  <div class="card" style="padding:16px;display:none" id="right-recent-scans">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-weight:600;font-size:13px">Recent Scans</div>
+      <span style="font-size:11px;color:var(--cyan);cursor:pointer">View All →</span>
+    </div>
+    <div id="recent-scans-list"><div style="font-size:12px;color:var(--faint);padding:4px 0">No scans yet.</div></div>
+  </div>
+
+  <!-- What to do next -->
+  <div class="card" style="padding:16px" id="right-whatnext">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+      <span style="color:var(--cyan);font-size:14px">✅</span>
+      <div style="font-weight:600;font-size:13px">What to do next?</div>
+    </div>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:10px">Get step-by-step guidance based on the analysis.</div>
+    <div id="whatnext-steps" style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center"><div class="step-num" style="background:rgba(129,140,248,.12);color:var(--indigo)">1</div><span style="font-size:12px;color:var(--dim)">Understand the risk</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><div class="step-num" style="background:rgba(34,211,238,.12);color:var(--cyan)">2</div><span style="font-size:12px;color:var(--dim)">See detailed explanation</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><div class="step-num" style="background:rgba(251,146,60,.12);color:var(--orange)">3</div><span style="font-size:12px;color:var(--dim)">Follow recommended actions</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><div class="step-num" style="background:rgba(248,113,113,.12);color:var(--red)">4</div><span style="font-size:12px;color:var(--dim)">Report if needed</span></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div style="max-width:1360px;margin:0 auto;padding:14px 20px;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:24px;height:24px;background:linear-gradient(135deg,var(--indigo),var(--cyan));border-radius:6px;display:flex;align-items:center;justify-content:center">
+        <svg width="12" height="12" viewBox="0 0 16 16"><path d="M8 1.5L2.5 4.5V9c0 3 2.3 5.8 5.5 6.5C11.2 14.8 13.5 12 13.5 9V4.5L8 1.5z" stroke="#0a0f1c" stroke-width="1.4" stroke-linejoin="round" fill="none"/><path d="M5.5 8.5l2 2 3-3.5" stroke="#0a0f1c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+      <span style="font-size:12px;color:var(--dim)"><b style="color:var(--ink)">PhishGuard AI</b> &nbsp;Detect. Explain. Protect.</span>
+    </div>
+    <div style="font-size:11px;color:var(--faint)">🌐 A Safer Digital Tomorrow</div>
+  </div>
+</footer>
+
+<script>
+/* ═══ STATE ═══ */
+let currentMode='realtime', callGuardActive=false, screenScanActive=false;
+let mediaRecorder=null, audioStream=null, screenStream=null;
+let sessionTimer=null, sessionSeconds=0;
+let fusionEvidence={text:'',url:'',image:null,audio:null,video:null};
+const COL={phish:'#f87171',susp:'#fb923c',safe:'#4ade80',crit:'#fca5a5'};
+
+/* ═══ MODE SWITCHING ═══ */
+function switchMode(m){
+  currentMode=m;
+  document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('mc-'+m).classList.add('active');
+  document.querySelectorAll('.mode-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+m).classList.add('active');
+
+  // Update hero subtitle
+  const subs={realtime:'Real-time protection. Deep analysis. Safer decisions.',
+    playback:'Analyze suspicious content you\'ve received. Get clear results and guidance.',
+    fusion:'Analyze suspicious content you\'ve received. Get clear results and guidance.'};
+  document.getElementById('hero-sub').textContent=subs[m]||subs.realtime;
+
+  // Toggle right sidebar panels
+  const rt=m==='realtime';
+  const fusion=m==='fusion';
+  const show=(id,v)=>{const el=document.getElementById(id);if(el)el.style.display=v?'block':'none'};
+  show('right-session',rt);show('right-transcript',rt);show('right-risk-gauge',rt);
+  show('right-pipeline',!rt);show('right-recent-scans',m==='playback');
+  show('right-fusion-scans',fusion);
+
+  // Update the top-right context card per mode
+  const ctx={
+    realtime:{icon:'🛡️',title:'Your AI Safety Companion',sub:'Messages · Calls · Images · Videos · URLs',foot:'Because people matter.'},
+    playback:{icon:'🛡️',title:'Your AI Safety Companion',sub:'Messages · Calls · Images · Videos · URLs',foot:'Analyze anything you\'ve received.'},
+    fusion:{icon:'🛡️',title:'Stronger Together',sub:'Multiple signals. Deeper context.',foot:'More accurate results.'}
+  }[m];
+  if(ctx){
+    document.getElementById('ctx-icon').textContent=ctx.icon;
+    document.getElementById('ctx-title').textContent=ctx.title;
+    document.getElementById('ctx-sub').textContent=ctx.sub;
+    document.getElementById('ctx-foot').textContent=ctx.foot;
+  }
+
+  // Update pipeline icons for fusion
+  if(m==='fusion'){
+    document.getElementById('pipeline-icons').innerHTML=
+      '<div class="proc-icon-box"><div class="pi">📝</div>NLP (Text)</div>'+
+      '<div class="proc-icon-box"><div class="pi">🔗</div>URL Analysis</div>'+
+      '<div class="proc-icon-box"><div class="pi">🖼️</div>Vision (Image)</div>'+
+      '<div class="proc-icon-box"><div class="pi">🎙️</div>Audio (Voice)</div>'+
+      '<div class="proc-icon-box"><div class="pi">🎬</div>Video (Deepfake)</div>'+
+      '<div class="proc-icon-box"><div class="pi">💡</div>Explainability (Why?)</div>';
+    document.getElementById('pipeline-icons').style.gridTemplateColumns='repeat(3,1fr)';
+    // Update pipeline steps for fusion
+    document.getElementById('pipeline-steps').innerHTML=
+      '<div class="proc-step">Input</div><span style="color:#4f46e5;font-size:11px">→</span>'+
+      '<div class="proc-step">Preprocess</div><span style="color:#4f46e5;font-size:11px">→</span>'+
+      '<div class="proc-step active">Multi-Modal Analysis</div><span style="color:#4f46e5;font-size:11px">→</span>'+
+      '<div class="proc-step">Fusion</div><span style="color:#4f46e5;font-size:11px">→</span>'+
+      '<div class="proc-step">Result</div>';
+  }else if(m==='playback'){
+    document.getElementById('pipeline-icons').innerHTML=
+      '<div class="proc-icon-box"><div class="pi">📝</div>NLP</div>'+
+      '<div class="proc-icon-box"><div class="pi">🔗</div>URL Analysis</div>'+
+      '<div class="proc-icon-box"><div class="pi">💡</div>Explainability</div>'+
+      '<div class="proc-icon-box"><div class="pi">🛡️</div>Safety Advice</div>';
+    document.getElementById('pipeline-icons').style.gridTemplateColumns='repeat(4,1fr)';
+    document.getElementById('pipeline-steps').innerHTML=
+      '<div class="proc-step">Input</div><span style="color:#4f46e5;font-size:11px">→</span>'+
+      '<div class="proc-step">Preprocess</div><span style="color:#4f46e5;font-size:11px">→</span>'+
+      '<div class="proc-step active">Model</div><span style="color:#4f46e5;font-size:11px">→</span>'+
+      '<div class="proc-step">Results</div>';
+  }
+}
+
+/* ═══ PLAYBACK TAB SWITCHING ═══ */
+function switchPlayTab(id){
+  document.querySelectorAll('#panel-playback .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#panel-playback .tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.closest('.tab-btn').classList.add('active');
+}
+
+function pbFileSelected(type){
+  const f=document.getElementById('pb-'+type+'-file').files[0];if(!f)return;
+  const z=document.getElementById('pb-zone-'+type);z.classList.add('ready');
+  z.innerHTML=`<div style="font-size:24px;margin-bottom:6px">✅</div><div style="font-weight:600">${f.name}</div><div style="font-size:11px;margin-top:4px">${(f.size/1024).toFixed(1)} KB · ready</div>`;
+}
+
+/* ═══ PLAYBACK TEXT & URL ANALYSIS ═══ */
+async function analyzeTextUrl(){
+  const btn=document.getElementById('pb-text-btn');
+  btn.disabled=true;document.getElementById('pb-text-btn-text').innerHTML='<span class="spin">⟳</span> Analyzing...';
+  try{
+    const text=document.getElementById('pb-text-input').value.trim();
+    const url=document.getElementById('pb-url-input').value.trim();
+    const includeUrl=document.getElementById('url-toggle').classList.contains('on');
+    if(!text&&!url)throw new Error('Please enter a message or URL.');
+
+    // Text analysis
+    const fd=new FormData();fd.append('text',text);
+    const textResp=await fetch('/detect-text',{method:'POST',body:fd});
+    const textData=await textResp.json();
+
+    // URL analysis (if toggle on)
+    let urlData=null;
+    if(includeUrl&&(url||text)){
+      const urlResp=await fetch('/analyze-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,url})});
+      urlData=await urlResp.json();
+    }
+
+    // Show results
+    showPlaybackResult(textData,'text',urlData);
+
+    // Explainability
+    try{
+      const exResp=await fetch('/explain-text',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      const exData=await exResp.json();
+      if(!exData.error)showTextExplain(exData);
+    }catch(e){}
+
+    addRecentActivity('Text & URL Analysis',textData.threat||'Low',text.substring(0,40)+'...');
+  }catch(e){alert(e.message)}
+  finally{btn.disabled=false;document.getElementById('pb-text-btn-text').textContent='🔍 Analyze Text & URL'}
+}
+
+async function checkUrlOnly(){
+  const url=document.getElementById('pb-url-input').value.trim();
+  if(!url){alert('Please enter a URL.');return}
+  try{
+    const resp=await fetch('/analyze-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const data=await resp.json();
+    showPlaybackResult({is_phishing:data.is_suspicious,confidence:data.confidence,threat:data.risk_level,
+      explanation:data.explanation,prediction:data.is_suspicious?'phishing':'legitimate'},'url',{urls_analyzed:[data]});
+  }catch(e){alert(e.message)}
+}
+
+/* ═══ PLAYBACK FILE ANALYSIS ═══ */
+async function analyzePlayback(type){
+  const fileEl=document.getElementById('pb-'+type+'-file');
+  if(!fileEl.files.length){alert('Please select a file first.');return}
+  const ep={audio:'/detect-voice',image:'/detect-image',video:'/detect-video'}[type];
+  const field={audio:'audio',image:'image',video:'video'}[type];
+  const fd=new FormData();fd.append(field,fileEl.files[0]);
+  try{
+    const resp=await fetch(ep,{method:'POST',body:fd});
+    const data=await resp.json();if(data.error)throw new Error(data.error);
+    showPlaybackResult(data,type);
+
+    // Image explainability
+    if(type==='image'){
+      try{
+        const efd=new FormData();efd.append('image',fileEl.files[0]);
+        const exResp=await fetch('/explain-image',{method:'POST',body:efd});
+        const exData=await exResp.json();
+        if(!exData.error)showImageExplain(exData);
+      }catch(e){}
+    }
+    addRecentActivity(type.charAt(0).toUpperCase()+type.slice(1)+' Analysis',data.threat||'Low',fileEl.files[0].name);
+  }catch(e){alert(e.message)}
+}
+
+/* ═══ SHOW PLAYBACK RESULTS ═══ */
+function showPlaybackResult(d,modality,urlData){
+  const pred=(d.prediction||'unknown').toLowerCase();
+  const conf=Math.round((d.confidence||.5)*100);
+  const threat=d.threat||'Medium';
+  const isP=['phishing','fake','spam','ai'].includes(pred)||d.is_phishing;
+  const color=isP?COL.phish:COL.safe;
+  const bc=threat==='Critical'?'badge-crit':threat==='High'?'badge-high':threat==='Medium'?'badge-medium':'badge-low';
+
+  document.getElementById('pb-verdict').textContent=isP?'⚠️ Threat Detected':'✅ Looks Safe';
+  document.getElementById('pb-verdict').style.color=color;
+  document.getElementById('pb-conf').textContent=conf+'%';
+  document.getElementById('pb-threat-badge').innerHTML=`<span class="badge ${bc}">Risk: ${threat}</span>`;
+  document.getElementById('pb-explanation').textContent=d.explanation||'Analysis complete.';
+  document.getElementById('playback-results').classList.add('visible');
+
+  // URL results
+  if(urlData&&urlData.urls_analyzed&&urlData.urls_analyzed.length){
+    document.getElementById('pb-url-results').style.display='block';
+    let html='';
+    urlData.urls_analyzed.forEach(u=>{
+      const uc=u.is_suspicious?COL.phish:COL.safe;
+      html+=`<div style="padding:8px 0;border-bottom:1px solid #111827"><div style="font-size:12px;color:${uc};font-weight:600">${u.is_suspicious?'⚠️ Suspicious':'✅ OK'} — ${u.url||u.domain}</div>`;
+      if(u.indicators&&u.indicators.length)html+=`<div style="font-size:11px;color:var(--dim);margin-top:4px">${u.indicators.join('; ')}</div>`;
+      html+='</div>';
+    });
+    document.getElementById('pb-url-detail').innerHTML=html;
+  }else{
+    document.getElementById('pb-url-results').style.display='none';
+  }
+  document.getElementById('pb-explain-card').style.display='none';
+
+  // Determine category for advice
+  let category='general';
+  const txt=((d.explanation||'')+' '+(document.getElementById('pb-text-input')?.value||'')).toLowerCase();
+  if(modality==='url'||(urlData&&urlData.any_suspicious))category='malicious_url';
+  if(/otp|pin|password|bank|account|kyc|verify/.test(txt))category='bank_scam';
+  if(modality==='audio')category='impersonation';
+
+  // Add a "What should I do?" button to the result
+  let btnHost=document.getElementById('pb-whatnext-inline');
+  if(!btnHost){
+    btnHost=document.createElement('div');btnHost.id='pb-whatnext-inline';
+    document.getElementById('playback-results').appendChild(btnHost);
+  }
+  btnHost.innerHTML = isP
+    ? `<button class="btn" style="margin-top:14px;font-size:13px" onclick="getAdvice('${category}')">🆘 What should I do?</button>`
+    : '';
+
+  // Update the right-sidebar What-to-do-next steps
+  updateWhatNext(isP?(threat==='High'||threat==='Critical'?'HIGH':'SUSPICIOUS'):'LOW', category);
+
+  // Push to recent scans sidebar
+  pushRecentScan(modality,threat,isP);
+}
+
+function showTextExplain(d){
+  document.getElementById('pb-explain-method').textContent=d.method;
+  const max=Math.max(...d.token_contributions.map(t=>Math.abs(t.contribution)),.001);
+  let html='<div style="font-size:12px;color:#94a3b8;margin-bottom:14px">'+d.summary+'</div>';
+  d.token_contributions.forEach(t=>{
+    const w=Math.abs(t.contribution)/max*100,c=t.direction==='phishing'?COL.phish:COL.safe,sign=t.contribution>0?'+':'';
+    html+=`<div class="tok"><div class="tok-name">${t.token}</div><div class="tok-bar-wrap"><div class="tok-bar" style="width:${w}%;background:${c}"></div></div><div class="tok-val" style="color:${c}">${sign}${t.contribution.toFixed(2)}</div></div>`;
+  });
+  html+='<div style="font-size:10px;color:var(--faint);margin-top:10px">Red = pushes toward phishing · Green = toward legitimate.</div>';
+  document.getElementById('pb-explain-body').innerHTML=html;
+  document.getElementById('pb-explain-card').style.display='block';
+}
+
+function showImageExplain(d){
+  document.getElementById('pb-explain-method').textContent=d.method||'grad_cam';
+  document.getElementById('pb-explain-body').innerHTML=
+    `<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <img src="/explain-image?format=image&t=${Date.now()}" style="max-width:260px;border-radius:10px;border:1px solid var(--line)" onerror="this.style.display='none'"/>
+      <div style="flex:1;min-width:200px;font-size:12px;color:#94a3b8;line-height:1.7">${d.summary||''}<div style="margin-top:8px;color:var(--dim)">Phishing probability: <b style="color:var(--orange)">${((d.phishing_probability||0)*100).toFixed(1)}%</b></div></div>
+    </div>`;
+  document.getElementById('pb-explain-card').style.display='block';
+}
+
+/* ═══ FUSION MODE ═══ */
+function fusionAdd(type){
+  if(type==='text'){
+    const m=document.getElementById('fusion-text-modal');
+    m.style.display=m.style.display==='none'?'block':'none';
+    return;
+  }
+  if(type==='url'){
+    const m=document.getElementById('fusion-url-modal');
+    m.style.display=m.style.display==='none'?'block':'none';
+    return;
+  }
+  document.getElementById('fev-'+type+'-input').click();
+}
+
+function fusionFileAdded(type,input){
+  if(!input.files.length)return;
+  fusionEvidence[type]=input.files[0];
+  document.getElementById('fev-'+type).classList.add('added');
+  const b=document.getElementById('fev-'+type+'-btn');
+  b.textContent='✅ Added';
+  b.style.background='rgba(74,222,128,.2)';
+  b.style.color='#4ade80';
+}
+
+async function runFusion(){
+  // Gather evidence
+  const text=document.getElementById('fev-text-val').value.trim();
+  const url=document.getElementById('fev-url-val').value.trim();
+  if(text){fusionEvidence.text=text;document.getElementById('fev-text').classList.add('added');document.getElementById('fev-text-btn').textContent='✅ Added'}
+  if(url){fusionEvidence.url=url;document.getElementById('fev-url').classList.add('added');document.getElementById('fev-url-btn').textContent='✅ Added'}
+
+  const hasEvidence=text||url||fusionEvidence.image||fusionEvidence.audio||fusionEvidence.video;
+  if(!hasEvidence){alert('Add at least one piece of evidence before analyzing.');return}
+
+  const fd=new FormData();
+  if(text)fd.append('text',text+(url?' '+url:''));
+  if(fusionEvidence.image)fd.append('image',fusionEvidence.image);
+  if(fusionEvidence.audio)fd.append('audio',fusionEvidence.audio);
+  if(fusionEvidence.video)fd.append('video',fusionEvidence.video);
+
+  try{
+    const resp=await fetch('/detect-fusion',{method:'POST',body:fd});
+    const d=await resp.json();if(d.error)throw new Error(d.error);
+    showFusionResult(d);
+    addRecentActivity('Fusion Investigation',d.threat||'Medium','Multi-evidence analysis');
+  }catch(e){alert(e.message)}
+}
+
+function showFusionResult(d){
+  const isP=d.is_phishing,threat=d.threat||'Medium';
+  const color=threat==='Critical'?COL.crit:isP?COL.phish:COL.safe;
+  document.getElementById('fusion-results').classList.add('visible');
+  document.getElementById('f-verdict').textContent=isP?'🚨 Threat Detected':'✅ Looks Safe';
+  document.getElementById('f-verdict').style.color=color;
+  document.getElementById('f-conf').textContent=Math.round((d.fused_confidence||0)*100)+'%';
+  const bc=threat==='Critical'?'badge-crit':threat==='High'?'badge-high':threat==='Medium'?'badge-medium':'badge-low';
+  document.getElementById('f-threat').innerHTML=`<span class="badge ${bc}">${threat}</span>`;
+  document.getElementById('f-campaign').innerHTML=`<span style="color:var(--dim);font-size:11px">CAMPAIGN&nbsp;</span> ${d.campaign_label||'—'}`;
+  let ch='';
+  for(const[m,v]of Object.entries(d.per_modality||{})){
+    const p=Math.round(v.phishing_probability*100),c=v.flagged?COL.phish:COL.safe;
+    ch+=`<div class="fch"><div class="fch-dot" style="background:${c}"></div><div style="width:52px;font-size:12px;color:var(--ink);text-transform:capitalize">${m}</div><div class="meter"><div class="meter-fill" style="width:${p}%;background:${c}"></div></div><div class="mono" style="width:40px;font-size:11px;color:${c}">${p}%</div></div>`;
+  }
+  document.getElementById('f-channels').innerHTML=ch;
+  document.getElementById('f-explain').textContent=d.explanation||'';
+
+  // Category + what-to-do
+  let category='general';
+  const camp=(d.campaign_label||'').toLowerCase();
+  if(/bank|credential|kyc|financial/.test(camp))category='bank_scam';
+  else if(/imperson|deepfake/.test(camp))category='impersonation';
+  else if(isP)category='malicious_url';
+
+  let btnHost=document.getElementById('f-whatnext-inline');
+  if(!btnHost){btnHost=document.createElement('div');btnHost.id='f-whatnext-inline';document.getElementById('fusion-results').appendChild(btnHost)}
+  btnHost.innerHTML = isP ? `<button class="btn" style="margin-top:14px;font-size:13px" onclick="getAdvice('${category}')">🆘 What should I do?</button>` : '';
+  updateWhatNext(threat==='Critical'||threat==='High'?'HIGH':isP?'SUSPICIOUS':'LOW', category);
+
+  // Record in fusion scans sidebar
+  pushFusionScan(d.campaign_label||'Multi-evidence incident',threat,isP);
+}
+
+function pushFusionScan(label,threat,isP){
+  const list=document.getElementById('fusion-scans-list');
+  if(list.children.length===1&&list.children[0].textContent.includes('No fusion'))list.innerHTML='';
+  const bc=threat==='Critical'?'badge-crit':threat==='High'?'badge-high':threat==='Medium'?'badge-medium':'badge-low';
+  const now=new Date();
+  const el=document.createElement('div');
+  el.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #111827;font-size:12px';
+  el.innerHTML=`<div style="width:30px;height:30px;border-radius:8px;background:rgba(129,140,248,.15);display:flex;align-items:center;justify-content:center;font-size:12px">🔬</div>
+    <div style="flex:1"><div style="color:var(--ink);font-size:11px">${label}</div><div style="color:var(--dimmer);font-size:10px">${now.toLocaleDateString()} ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>
+    <span class="badge ${bc}">${threat}</span>`;
+  list.prepend(el);
+}
+
+/* ═══ REAL-TIME STATE ═══ */
+let speechRecognizer=null;
+let callFullTranscript='';       // accumulated across the whole call
+let lastCallCategory='general', lastCallLevel='LOW';
+let lastScreenCategory='general', lastScreenLevel='LOW';
+let screenVideo=null, screenCaptureInterval=null;
+
+/* Check Web Speech API support */
+function getSpeechRecognition(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  return SR?new SR():null;
+}
+
+/* ═══ REAL-TIME CALL GUARD ═══ */
+async function toggleCallGuard(){
+  if(callGuardActive){stopCallGuard();return}
+  try{
+    audioStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){
+    alert('Microphone access denied. Please allow microphone permission to use Call Guard.');
+    return;
+  }
+  callGuardActive=true;
+  callFullTranscript='';
+  document.getElementById('call-idle').style.display='none';
+  document.getElementById('call-active').style.display='block';
+  document.getElementById('call-result').style.display='none';
+  document.getElementById('call-analyze-btn').style.display='none';
+  document.getElementById('call-btn').style.background='linear-gradient(135deg,#f87171,#fb923c)';
+  document.getElementById('call-btn-text').textContent='Stop Call Guard';
+  document.getElementById('call-btn-icon').textContent='⏹️';
+  document.getElementById('session-live-badge').style.display='flex';
+  document.getElementById('session-mode').innerHTML='📞 Call Guard';
+  document.getElementById('transcript-body').innerHTML='';
+  startSessionTimer();
+
+  // Use the browser's Web Speech API for reliable live transcription
+  speechRecognizer=getSpeechRecognition();
+  if(speechRecognizer){
+    speechRecognizer.continuous=true;
+    speechRecognizer.interimResults=true;
+    speechRecognizer.lang='en-IN';
+    speechRecognizer.onresult=async(event)=>{
+      let finalText='';
+      for(let i=event.resultIndex;i<event.results.length;i++){
+        if(event.results[i].isFinal)finalText+=event.results[i][0].transcript+' ';
+      }
+      if(finalText.trim()){
+        callFullTranscript+=finalText;
+        appendTranscript(finalText.trim());
+        // Score this line live
+        try{
+          const resp=await fetch('/score-transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:callFullTranscript})});
+          const d=await resp.json();
+          updateRealTimeRisk(d,'call');
+        }catch(err){}
+      }
+    };
+    speechRecognizer.onerror=(e)=>{if(e.error==='not-allowed')alert('Speech recognition permission denied.')};
+    speechRecognizer.onend=()=>{if(callGuardActive){try{speechRecognizer.start()}catch(e){}}};
+    try{speechRecognizer.start()}catch(e){}
+  }else{
+    // Fallback: record audio and send chunks to server for analysis
+    document.getElementById('call-transcript-preview').textContent='(Live transcription not supported in this browser — recording audio for analysis on Stop.)';
+    audioChunks=[];
+    mediaRecorder=new MediaRecorder(audioStream);
+    mediaRecorder.ondataavailable=(e)=>{if(e.data.size>0)audioChunks.push(e.data)};
+    mediaRecorder.start();
+  }
+}
+
+let audioChunks=[];
+function stopCallGuard(){
+  callGuardActive=false;
+  if(speechRecognizer){try{speechRecognizer.stop()}catch(e){}speechRecognizer=null}
+  if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();
+  if(audioStream)audioStream.getTracks().forEach(t=>t.stop());
+  document.getElementById('call-btn').style.background='linear-gradient(135deg,#4ade80,#22d3ee)';
+  document.getElementById('call-btn-text').textContent='Start Call Guard';
+  document.getElementById('call-btn-icon').textContent='🎙️';
+  document.getElementById('session-live-badge').style.display='none';
+  stopSessionTimer();
+  // Show the Analyze button so the user can get a final verdict
+  document.getElementById('call-analyze-btn').style.display='flex';
+}
+
+function appendTranscript(text){
+  const tb=document.getElementById('transcript-body');
+  if(tb.textContent.includes('Conversation will appear'))tb.innerHTML='';
+  tb.innerHTML+=`<div style="padding:4px 0;border-bottom:1px solid #111827"><span style="color:var(--dimmer);font-size:10px">[${new Date().toLocaleTimeString()}]</span> ${text}</div>`;
+  tb.scrollTop=tb.scrollHeight;
+  document.getElementById('call-transcript-preview').textContent='"'+text.substring(0,60)+'"';
+}
+
+/* Analyze the whole recorded call and give a final verdict + advice */
+async function analyzeCallRecording(){
+  const btn=document.getElementById('call-analyze-btn');
+  btn.disabled=true;document.getElementById('call-analyze-text').innerHTML='<span class="spin">⟳</span> Analyzing...';
+  try{
+    let d;
+    if(callFullTranscript.trim()){
+      // We have a transcript from Web Speech API
+      const resp=await fetch('/score-transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:callFullTranscript})});
+      d=await resp.json();
+    }else if(audioChunks.length){
+      // Fallback: send recorded audio to server
+      const blob=new Blob(audioChunks,{type:'audio/webm'});
+      const fd=new FormData();fd.append('audio',blob,'call.webm');
+      const resp=await fetch('/analyze-audio-chunk',{method:'POST',body:fd});
+      d=await resp.json();
+    }else{
+      throw new Error('No conversation was captured. Try again and speak during the call.');
+    }
+    showCallResult(d);
+    addRecentActivity('Audio (Call) Analysis',levelToThreat(d.risk_level),callFullTranscript.substring(0,40)||'Call recording');
+  }catch(e){alert(e.message)}
+  finally{btn.disabled=false;document.getElementById('call-analyze-text').textContent='🔍 Analyze Recording'}
+}
+
+function showCallResult(d){
+  const level=d.risk_level||'LOW';
+  lastCallLevel=level;lastCallCategory=d.category||'general';
+  const {emoji,color,verdict}=riskPresentation(level);
+  const box=document.getElementById('call-result');box.style.display='block';
+  document.getElementById('call-result-verdict').textContent=`${emoji} ${verdict}`;
+  document.getElementById('call-result-verdict').style.color=color;
+  let sig=d.signals&&d.signals.length?('Detected: '+d.signals.join(', ')+'.'):'No strong scam indicators found in the conversation.';
+  document.getElementById('call-result-signals').textContent=sig;
+  document.getElementById('call-whatnext-btn').style.display=(level==='LOW')?'none':'flex';
+  updateRealTimeRisk(d,'call');
+  updateWhatNext(level,d.category);
+}
+
+/* ═══ SCREEN SCAN ═══ */
+async function toggleScreenScan(){
+  if(screenScanActive){stopScreenScan();return}
+  try{
+    screenStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+  }catch(e){
+    alert('Screen sharing was cancelled or denied.');
+    return;
+  }
+  screenScanActive=true;
+  document.getElementById('screen-idle').style.display='none';
+  document.getElementById('screen-active').style.display='block';
+  document.getElementById('screen-result').style.display='none';
+  document.getElementById('screen-btn').style.background='linear-gradient(135deg,#f87171,#fb923c)';
+  document.getElementById('screen-btn-text').textContent='Stop Screen Scan';
+  document.getElementById('screen-btn-icon').textContent='⏹️';
+  document.getElementById('screen-analyze-btn').style.display='flex';
+  document.getElementById('session-live-badge').style.display='flex';
+  document.getElementById('session-mode').innerHTML='🖥️ Screen Scan';
+  startSessionTimer();
+
+  screenVideo=document.createElement('video');
+  screenVideo.srcObject=screenStream;screenVideo.play();
+
+  // Periodic passive scan every 8s
+  screenCaptureInterval=setInterval(()=>{if(screenScanActive)captureAndAnalyzeScreen(true)},8000);
+  screenStream.getVideoTracks()[0].onended=()=>stopScreenScan();
+}
+
+function stopScreenScan(){
+  screenScanActive=false;
+  if(screenCaptureInterval)clearInterval(screenCaptureInterval);
+  if(screenStream)screenStream.getTracks().forEach(t=>t.stop());
+  document.getElementById('screen-btn').style.background='linear-gradient(135deg,var(--indigo),var(--cyan))';
+  document.getElementById('screen-btn-text').textContent='Start Screen Scan';
+  document.getElementById('screen-btn-icon').textContent='🖥️';
+  document.getElementById('session-live-badge').style.display='none';
+  stopSessionTimer();
+}
+
+/* Manual "Analyze What I See" — captures current frame and gives a verdict */
+async function analyzeScreenNow(){
+  const btn=document.getElementById('screen-analyze-btn');
+  btn.disabled=true;document.getElementById('screen-analyze-text').innerHTML='<span class="spin">⟳</span> Analyzing...';
+  try{await captureAndAnalyzeScreen(false)}
+  catch(e){alert(e.message)}
+  finally{btn.disabled=false;document.getElementById('screen-analyze-text').textContent='🔍 Analyze What I See'}
+}
+
+async function captureAndAnalyzeScreen(passive){
+  if(!screenVideo||!screenVideo.videoWidth)return;
+  const canvas=document.createElement('canvas');
+  canvas.width=screenVideo.videoWidth;canvas.height=screenVideo.videoHeight;
+  canvas.getContext('2d').drawImage(screenVideo,0,0);
+  const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.7));
+  if(!blob)return;
+  const fd=new FormData();fd.append('image',blob,'screen.jpg');
+  const resp=await fetch('/analyze-screen',{method:'POST',body:fd});
+  const d=await resp.json();
+  showScreenResult(d,passive);
+}
+
+function showScreenResult(d,passive){
+  const level=d.risk_level||'LOW';
+  lastScreenLevel=level;lastScreenCategory=d.category||'general';
+  const {emoji,color,verdict}=riskPresentation(level);
+  // Update the live "scanning" display
+  document.getElementById('screen-risk-display').textContent=`${emoji} ${verdict}`;
+  document.getElementById('screen-risk-display').style.color=color;
+  document.getElementById('screen-status').textContent=
+    d.is_scam?'Suspicious content detected on screen':'Screen content looks safe so far';
+  // On a manual analyze, also show the result box + advice
+  if(!passive){
+    const box=document.getElementById('screen-result');box.style.display='block';
+    document.getElementById('screen-result-verdict').textContent=`${emoji} ${verdict}`;
+    document.getElementById('screen-result-verdict').style.color=color;
+    let sig=d.signals&&d.signals.length?('Detected: '+d.signals.join(', ')+'.'):'No strong scam indicators found on screen.';
+    document.getElementById('screen-result-signals').textContent=sig;
+    document.getElementById('screen-whatnext-btn').style.display=(level==='LOW')?'none':'flex';
+    addRecentActivity('Image (Screen) Analysis',levelToThreat(level),'Screen content scan');
+    updateWhatNext(level,d.category);
+  }
+  updateRealTimeRisk(d,'screen');
+}
+
+/* ═══ RISK DISPLAY HELPERS ═══ */
+function riskPresentation(level){
+  const map={
+    LOW:{emoji:'🟢',color:'var(--green)',verdict:'LOW RISK — Looks Safe'},
+    SUSPICIOUS:{emoji:'🟡',color:'var(--yellow)',verdict:'SUSPICIOUS'},
+    HIGH:{emoji:'🟠',color:'var(--orange)',verdict:'HIGH RISK'},
+    DANGER:{emoji:'🔴',color:'var(--red)',verdict:'DANGER — POSSIBLE SCAM'},
+  };
+  return map[level]||map.LOW;
+}
+function levelToThreat(level){return {LOW:'Low',SUSPICIOUS:'Medium',HIGH:'High',DANGER:'High'}[level]||'Low'}
+
+function updateRealTimeRisk(d,which){
+  const risk=d.combined_risk||0;const level=d.risk_level||'LOW';
+  const pct=Math.round(risk*100);
+  const {emoji,color}=riskPresentation(level);
+  document.getElementById('risk-pct').textContent=pct+'%';
+  document.getElementById('risk-pct').style.color=color;
+  document.getElementById('risk-ring').style.borderColor=color;
+  document.getElementById('risk-label').textContent=level;
+  document.getElementById('risk-label').style.color=color;
+  document.getElementById('session-risk').textContent=level;
+  document.getElementById('session-risk').style.color=color;
+  if(which==='call'){
+    const rd=document.getElementById('call-risk-display');
+    rd.textContent=`${emoji} ${level} RISK`;rd.style.color=color;
+  }
+}
+
+/* ═══ SESSION TIMER ═══ */
+function startSessionTimer(){sessionSeconds=0;stopSessionTimer();
+  sessionTimer=setInterval(()=>{sessionSeconds++;
+    const h=String(Math.floor(sessionSeconds/3600)).padStart(2,'0');
+    const m=String(Math.floor((sessionSeconds%3600)/60)).padStart(2,'0');
+    const s=String(sessionSeconds%60).padStart(2,'0');
+    document.getElementById('session-duration').textContent=h+':'+m+':'+s;
+  },1000);
+}
+function stopSessionTimer(){if(sessionTimer)clearInterval(sessionTimer);sessionTimer=null}
+
+/* ═══ SAMPLE CALL TEST ═══ */
+async function testSampleCall(){
+  const phrases=[
+    'Hello, you have reached SBI customer care.',
+    'Your account has been compromised. We need to verify your identity immediately.',
+    'Please transfer 25000 rupees to a secure account for verification.',
+    'Tell me the OTP you just received on your phone.',
+  ];
+  document.getElementById('call-idle').style.display='none';
+  document.getElementById('call-active').style.display='block';
+  document.getElementById('call-result').style.display='none';
+  document.getElementById('call-analyze-btn').style.display='none';
+  document.getElementById('call-btn').disabled=true;
+  document.getElementById('session-live-badge').style.display='flex';
+  document.getElementById('session-mode').innerHTML='📞 Sample Call';
+  document.getElementById('transcript-body').innerHTML='';
+  callFullTranscript='';
+  startSessionTimer();
+
+  for(let i=0;i<phrases.length;i++){
+    await new Promise(r=>setTimeout(r,2500));
+    callFullTranscript+=phrases[i]+' ';
+    appendTranscript(phrases[i]);
+    try{
+      const resp=await fetch('/score-transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:callFullTranscript})});
+      const d=await resp.json();
+      updateRealTimeRisk(d,'call');
+    }catch(e){}
+  }
+  await new Promise(r=>setTimeout(r,1500));
+  document.getElementById('call-btn').disabled=false;
+  document.getElementById('session-live-badge').style.display='none';
+  stopSessionTimer();
+  // Final verdict
+  const resp=await fetch('/score-transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transcript:callFullTranscript})});
+  const d=await resp.json();
+  showCallResult(d);
+}
+
+/* ═══ WHAT TO DO NEXT (right sidebar, dynamic) ═══ */
+function updateWhatNext(level,category){
+  const steps=document.getElementById('whatnext-steps');
+  const adviceByCat={
+    bank_scam:['Do NOT share any OTP, PIN or password','End the call / ignore the message','Call your bank using the official number','Report to cybercrime helpline 1930'],
+    impersonation:['Call the person back on a known number','Ask something only they would know','Do NOT send money on a call alone','Report to cyber-crime authorities'],
+    malicious_url:['Do NOT open the link or enter details','Do not download anything from it','Change passwords if you clicked','Report the URL as unsafe'],
+    threat_coercion:['Do NOT engage with the sender','Save/screenshot the evidence','Contact a trusted person','Report to police / cyber cell 1930'],
+    general:['Understand the risk','See detailed explanation','Follow recommended actions','Report if needed'],
+  };
+  const list=adviceByCat[category]||adviceByCat.general;
+  const cols=['rgba(129,140,248,.12)','rgba(34,211,238,.12)','rgba(251,146,60,.12)','rgba(248,113,113,.12)'];
+  const txtcols=['var(--indigo)','var(--cyan)','var(--orange)','var(--red)'];
+  let html='';
+  list.forEach((s,i)=>{
+    html+=`<div style="display:flex;gap:8px;align-items:center"><div class="step-num" style="background:${cols[i]};color:${txtcols[i]}">${i+1}</div><span style="font-size:12px;color:${level==='LOW'?'var(--dim)':'var(--ink)'}">${s}</span></div>`;
+  });
+  steps.innerHTML=html;
+}
+
+/* ═══ SAFETY ADVICE ═══ */
+async function getAdvice(type){
+  try{
+    const resp=await fetch('/safety-advice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threat_type:type||'general'})});
+    const d=await resp.json();
+    let msg=`🚨 ${d.title}\n\nDO THIS NOW:\n\n`;
+    d.actions.forEach((a,i)=>msg+=`${i+1}. ${a}\n`);
+    alert(msg);
+  }catch(e){alert('Could not load safety advice.')}
+}
+/* Show category-specific advice (from result boxes' What should I do? button) */
+function showWhatNext(category,level){getAdvice(category||'general')}
+
+/* ═══ RECENT ACTIVITY + SCANS ═══ */
+function addRecentActivity(label,threat,detail){
+  const list=document.getElementById('recent-activity');
+  if(list.children.length===1&&list.children[0].textContent.includes('No scans'))list.innerHTML='';
+  const colors={High:'#f87171',Medium:'#fb923c',Low:'#4ade80',Critical:'#fca5a5'};
+  const icons={text:'📝',audio:'🎙️',image:'🖼️',video:'🎬',url:'🔗',fusion:'🔬'};
+  const ic=Object.entries(icons).find(([k])=>label.toLowerCase().includes(k));
+  const el=document.createElement('div');
+  el.style.cssText='flex-shrink:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;width:180px';
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <div style="width:30px;height:30px;border-radius:8px;background:${(colors[threat]||colors.Low)+'22'};display:flex;align-items:center;justify-content:center;font-size:14px">${ic?ic[1]:'🔍'}</div>
+    <div><div style="font-size:12px;font-weight:600;color:var(--ink)">${label}</div><div style="font-size:10px;color:var(--dimmer)">just now</div></div>
+    <span class="badge badge-${threat.toLowerCase()}" style="margin-left:auto">${threat}</span>
+  </div>
+  <div style="font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${detail||''}</div>`;
+  list.prepend(el);
+}
+
+function pushRecentScan(modality,threat,isP){
+  const list=document.getElementById('recent-scans-list');
+  if(list.children.length===1&&list.children[0].textContent.includes('No scans'))list.innerHTML='';
+  const color=isP?COL.phish:COL.safe;
+  const bc=threat==='High'?'badge-high':threat==='Medium'?'badge-medium':'badge-low';
+  const now=new Date();
+  const el=document.createElement('div');
+  el.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #111827;font-size:12px';
+  el.innerHTML=`<div style="width:30px;height:30px;border-radius:8px;background:${color}22;display:flex;align-items:center;justify-content:center;font-size:12px">🔍</div>
+    <div style="flex:1"><div style="color:var(--ink)">${modality} scan</div><div style="color:var(--dimmer);font-size:10px">${now.toLocaleTimeString()}</div></div>
+    <span class="badge ${bc}">${threat}</span>`;
+  list.prepend(el);
+}
+
+// Initialize
+switchMode('realtime');
+</script>
+</body>
+</html>
