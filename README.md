@@ -1,6 +1,7 @@
 # PhishGuard AI — Multi-Modal Phishing & Deepfake Detection
+**GitHub Repository:** https://github.com/sonalika-singha/cyber-security-project
 
-Final-year B.Tech project. A cross-modal AI system that detects phishing and
+Cyber-Seccurity project. A cross-modal AI system that detects phishing and
 deepfake content across **text, voice, image, and video**, with three flagship
 capabilities added on top of the base detectors:
 
@@ -16,7 +17,7 @@ capabilities added on top of the base detectors:
 
 ```bash
 # 1. Enter the project
-cd phishguard-ai/backend
+cd backend
 
 # 2. (recommended) create a virtual environment
 python -m venv venv
